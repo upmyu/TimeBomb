@@ -403,19 +403,40 @@ select {
   overflow: auto;
 }
 
+/* エラー通知: フローに載せると背が伸びてボタンが画面外に出るため、
+   トースト風に画面上部に固定表示する (どの画面でも同じ挙動) */
 .error-banner {
+  position: fixed;
+  top: 0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(92vw, 540px);
+  margin: 0;
   background: #8f2b18;
   color: #fff6f2;
+  border: 1px solid rgba(255, 200, 180, 0.35);
   border-radius: 14px;
-  padding: 0.55rem 0.8rem;
-  margin-top: 0.2rem;
+  padding: 0.6rem 0.85rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  font-size: 0.88rem;
-  line-height: 1.25;
-  flex-shrink: 0;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  box-shadow: 0 8px 22px rgba(80, 10, 0, 0.35);
+  animation: error-banner-slide-in 220ms ease-out;
+}
+
+@keyframes error-banner-slide-in {
+  from {
+    transform: translate(-50%, -140%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
 
 .error-close {
@@ -439,16 +460,6 @@ select {
 
 .confirm-actions {
   justify-content: flex-end;
-}
-
-.app-shell-game .error-banner {
-  position: fixed;
-  top: 0.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  margin-top: 0;
-  width: min(90vw, 540px);
 }
 
 .game-stage {
