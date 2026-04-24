@@ -72,6 +72,20 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* 控えめな退出/補助ボタン: 境界線のみで主張しすぎない */
+button.ghost {
+  background: transparent;
+  color: #6a533d;
+  border: 1px solid rgba(138, 93, 44, 0.4);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: rgba(138, 93, 44, 0.08);
+  color: #3d2a17;
+}
+
 input,
 select {
   border: 1px solid #cbb79a;
@@ -84,12 +98,12 @@ select {
   width: min(1120px, calc(100vw - 2rem));
   margin: 0 auto;
   height: 100vh;
-  padding: 0.85rem 0 0.9rem;
+  padding: 0.55rem 0 0.55rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.5rem;
+  justify-content: flex-start;
+  gap: 0.45rem;
 }
 
 .app-shell-game {
@@ -100,7 +114,8 @@ select {
 }
 
 .hero {
-  padding: 0.45rem 0 0.6rem;
+  padding: 0.1rem 0 0.25rem;
+  text-align: center;
 }
 
 .hero h1,
@@ -110,14 +125,34 @@ select {
 }
 
 .hero h1 {
-  font-size: clamp(1.5rem, 2.5vw, 2.15rem);
-  letter-spacing: 0.02em;
+  font-size: clamp(1.35rem, 2.4vw, 1.95rem);
+  letter-spacing: 0.14em;
+  font-weight: 900;
+  background: linear-gradient(180deg, #2b1e14 0%, #5a3a20 50%, var(--color-copper-deep) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.3);
+  display: inline-block;
+  position: relative;
 }
 
 .hero h1::before {
-  content: "⟐ ";
+  content: "⟐";
   color: var(--color-copper);
+  -webkit-text-fill-color: var(--color-copper);
+  margin-right: 0.5em;
   letter-spacing: 0;
+  font-weight: 400;
+}
+
+.hero h1::after {
+  content: "⟐";
+  color: var(--color-copper);
+  -webkit-text-fill-color: var(--color-copper);
+  margin-left: 0.5em;
+  letter-spacing: 0;
+  font-weight: 400;
 }
 
 .eyebrow {
@@ -172,8 +207,16 @@ select {
 
 .split {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* 常に2等分。狭い端末だけメディアクエリで1列にする。
+     auto-fit だと広い端末で3列以上生成されて2つの子が左に寄る問題があったため固定2列に変更 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
+}
+
+@media (max-width: 560px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .headline-row {
@@ -363,13 +406,16 @@ select {
 .error-banner {
   background: #8f2b18;
   color: #fff6f2;
-  border-radius: 18px;
-  padding: 0.95rem 1rem;
-  margin-top: 0.55rem;
+  border-radius: 14px;
+  padding: 0.55rem 0.8rem;
+  margin-top: 0.2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  flex-shrink: 0;
 }
 
 .error-close {
@@ -986,29 +1032,71 @@ select {
 }
 
 .screen-setup .hero {
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.2rem;
 }
 
-/* 初期画面: 中身の合計が viewport に収まるよう自動サイズ、余白でバランス */
+/* 初期画面: 必ず viewport に収まる。flex で残り領域を埋めてから内部を自己縮小 */
 .screen-setup .panel {
-  max-height: calc(100vh - 5.5rem);
-  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
   display: grid;
   align-content: start;
-  gap: 0.6rem;
-}
-
-.screen-setup .subpanel {
+  gap: 0.5rem;
   padding: 0.7rem 0.85rem;
 }
 
+.screen-setup .stack {
+  gap: 0.45rem;
+}
+
+.screen-setup .split {
+  gap: 0.55rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* subpanel 内の主ボタンは常にサブパネル全幅 (「参加する」「ルームを作成」で幅が揃う)。
+   また、子要素数が違う subpanel 同士でもボタン位置を揃えるため flex + margin-top:auto */
+.screen-setup .subpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.screen-setup .subpanel button.primary {
+  width: 100%;
+  margin-top: auto;
+}
+
+.screen-setup .subpanel {
+  padding: 0.55rem 0.7rem;
+}
+
 .screen-setup .subpanel h2 {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
+  margin: 0;
+}
+
+.screen-setup .field {
+  gap: 0.25rem;
+}
+
+.screen-setup .field > span {
+  font-size: 0.82rem;
+  color: #5a4b3e;
+  line-height: 1.1;
 }
 
 .screen-setup .field input,
 .screen-setup .field select {
-  padding: 0.6rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.screen-setup button.primary {
+  padding: 0.55rem 0.9rem;
+  font-size: 0.98rem;
 }
 
 .screen-lobby .hero {
@@ -1026,6 +1114,25 @@ select {
   align-content: start;
   overflow-y: auto;
   grid-auto-rows: minmax(64px, auto);
+}
+
+.lobby-controls {
+  gap: 0.5rem;
+}
+
+.lobby-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.lobby-actions .primary {
+  flex: 1 1 10rem;
+}
+
+.lobby-actions button.ghost {
+  flex: 0 0 auto;
 }
 
 .screen-role,
@@ -1266,16 +1373,6 @@ select {
 }
 
 @media (orientation: portrait) {
-  body {
-    overflow: auto;
-  }
-
-  .app-shell:not(.app-shell-game) {
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
-  }
-
   .card-stage {
     flex-wrap: wrap;
     align-content: center;
@@ -1286,90 +1383,88 @@ select {
     max-width: none;
   }
 
-  .screen-lobby .panel,
-  .screen-setup .panel,
-  .screen-role .panel,
-  .screen-wire .panel,
-  .screen-round-end .panel {
-    height: auto;
+  /* 縦持ちでもスクロール禁止: 内部で収めるため screen-setup の split は1段組み */
+  .screen-setup .split {
+    grid-template-columns: 1fr;
   }
 }
 
-/* 横持ちで縦が短い画面(例: スマホ横持ち)でのはみ出し対策 */
+/* 横持ちで縦が短い画面(例: スマホ横持ち)でのはみ出し対策: スクロールせず内部を縮める */
 @media (orientation: landscape) and (max-height: 600px) {
-  body {
-    overflow: auto;
-  }
-
-  /* ゲーム画面(カード表示中・終了後)はフルスクリーンのまま保つ */
   .app-shell:not(.app-shell-game) {
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
-    padding: 0.4rem 0 0.5rem;
+    padding: 0.25rem 0 0.3rem;
+    gap: 0.3rem;
   }
 
   .hero {
-    padding: 0.1rem 0 0.25rem;
+    padding: 0 0 0.15rem;
   }
 
   .hero h1 {
     font-size: 1.05rem;
     line-height: 1.15;
-  }
-
-  .hero .eyebrow,
-  .hero .subtle {
-    display: none;
+    letter-spacing: 0.08em;
   }
 
   .panel {
-    margin-top: 0.4rem;
-    padding: 0.6rem 0.7rem;
-    border-radius: 16px;
+    margin-top: 0.2rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 14px;
   }
 
   .stack {
-    gap: 0.45rem;
+    gap: 0.4rem;
   }
 
+  /* 横持ちでは subpanel を必ず横並びに保つ(縦を稼ぐ) */
   .split {
-    gap: 0.5rem;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.45rem;
+    grid-template-columns: 1fr 1fr;
   }
 
   .subpanel {
-    padding: 0.6rem 0.7rem;
-    border-radius: 14px;
+    padding: 0.45rem 0.6rem;
+    border-radius: 12px;
   }
 
   .panel h2,
   .subpanel h2 {
-    font-size: 1rem;
+    font-size: 0.92rem;
+  }
+
+  .screen-setup .subpanel h2 {
+    font-size: 0.92rem;
   }
 
   input,
   select,
   button {
-    padding: 0.55rem 0.75rem;
+    padding: 0.45rem 0.65rem;
     border-radius: 10px;
+    font-size: 0.9rem;
+  }
+
+  .screen-setup .field input,
+  .screen-setup .field select {
+    padding: 0.4rem 0.65rem;
+  }
+
+  .screen-setup .field > span {
+    font-size: 0.78rem;
   }
 
   .field {
-    gap: 0.2rem;
+    gap: 0.15rem;
   }
 
-  .screen-setup .panel,
-  .screen-lobby .panel,
-  .screen-role .panel,
-  .screen-wire .panel,
-  .screen-round-end .panel {
-    height: auto;
-    min-height: 0;
+  .error-banner {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.82rem;
+    margin-top: 0.1rem;
   }
 
   .screen-lobby .player-list {
-    max-height: 40vh;
+    max-height: 45vh;
   }
 
   .screen-role .role-card {

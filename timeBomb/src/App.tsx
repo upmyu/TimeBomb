@@ -354,9 +354,7 @@ export function App() {
     <div className={`app-shell ${isGameScreen ? "app-shell-game" : ""} ${screenClassName}`}>
       {!isGameScreen ? (
         <header className="hero">
-          <p className="eyebrow">Timebomb MVP</p>
-          <h1>対面プレイ用『タイムボム』</h1>
-          <p className="subtle">秘密情報は自分の端末だけに表示し、ゲーム状態はすべてサーバーで管理します。</p>
+          <h1>タイムボム</h1>
         </header>
       ) : null}
 
@@ -441,6 +439,9 @@ export function App() {
                 publicState={publicState}
                 isHost={isHost}
                 onStart={handleStartGame}
+                onLeave={() =>
+                  askConfirm("このルームから退出してホームに戻りますか？", handleLeaveAndGoHome)
+                }
               />
             </section>
           ) : null}
@@ -877,19 +878,30 @@ function LobbyControls({
   publicState,
   isHost,
   onStart,
+  onLeave,
 }: {
   publicState: PublicRoomState;
   isHost: boolean;
   onStart: (initialCutterPlayerId?: string) => void;
+  onLeave: () => void;
 }) {
   const [selectedInitialCutter, setSelectedInitialCutter] = useState("");
 
   if (!isHost) {
-    return <p className="subtle">ホストの開始を待っています。</p>;
+    return (
+      <div className="stack lobby-controls">
+        <p className="subtle">ホストの開始を待っています。</p>
+        <div className="lobby-actions">
+          <button className="ghost" onClick={onLeave}>
+            ルームから退出
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="stack">
+    <div className="stack lobby-controls">
       <p className="subtle">
         初手ニッパー係: {publicState.initialCutterMode === "random" ? "ランダム" : "ホスト指定"}
       </p>
@@ -906,18 +918,23 @@ function LobbyControls({
           </select>
         </label>
       ) : null}
-      <button
-        className="primary"
-        disabled={
-          publicState.players.length < 4 ||
-          (publicState.initialCutterMode === "host_select" && !selectedInitialCutter)
-        }
-        onClick={() =>
-          onStart(publicState.initialCutterMode === "host_select" ? selectedInitialCutter : undefined)
-        }
-      >
-        ゲーム開始
-      </button>
+      <div className="lobby-actions">
+        <button
+          className="primary"
+          disabled={
+            publicState.players.length < 4 ||
+            (publicState.initialCutterMode === "host_select" && !selectedInitialCutter)
+          }
+          onClick={() =>
+            onStart(publicState.initialCutterMode === "host_select" ? selectedInitialCutter : undefined)
+          }
+        >
+          ゲーム開始
+        </button>
+        <button className="ghost" onClick={onLeave}>
+          ルームから退出
+        </button>
+      </div>
     </div>
   );
 }
