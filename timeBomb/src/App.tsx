@@ -7,8 +7,20 @@ import type {
   PublicPlayer,
   PublicRoomState,
   ServerMessage,
+  WireCard,
   WireSlot,
 } from "@shared/types";
+import cardDefuseImg from "./assets/cards/01_defuse.png";
+import cardSilentImg from "./assets/cards/02_silent.png";
+import cardBoomImg from "./assets/cards/03_boom.png";
+import cardBackImg from "./assets/cards/04_bomb.png";
+import nipperImg from "./assets/img/nipper.png";
+
+function cardImageSrc(card: WireCard): string {
+  if (card === "defuse") return cardDefuseImg;
+  if (card === "boom") return cardBoomImg;
+  return cardSilentImg;
+}
 
 const storageKey = "timebomb-mvp-identities";
 
@@ -63,6 +75,8 @@ export function App() {
   const [showRole, setShowRole] = useState(false);
   const [showWires, setShowWires] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [showBoomFlash, setShowBoomFlash] = useState(false);
+  const boomFlashShownRef = useRef(false);
 
   useEffect(() => {
     const socket = new WebSocket(buildWsUrl());
@@ -123,6 +137,22 @@ export function App() {
   const me = clientState.me;
   const publicState = clientState.publicState;
   const privateState = clientState.privateState;
+
+  // BOOM で終了した瞬間だけ全画面フラッシュ演出。finished 状態を抜けたらリセット。
+  useEffect(() => {
+    const isBoomEnding =
+      publicState?.status === "finished" && publicState?.game?.finishReason === "boom";
+    if (isBoomEnding && !boomFlashShownRef.current) {
+      boomFlashShownRef.current = true;
+      setShowBoomFlash(true);
+      const timer = window.setTimeout(() => setShowBoomFlash(false), 2400);
+      return () => window.clearTimeout(timer);
+    }
+    if (publicState?.status !== "finished") {
+      boomFlashShownRef.current = false;
+      if (showBoomFlash) setShowBoomFlash(false);
+    }
+  }, [publicState?.status, publicState?.game?.finishReason, showBoomFlash]);
 
   const playersById = useMemo(() => {
     const map = new Map<string, PublicPlayer>();
@@ -295,6 +325,8 @@ export function App() {
   const isFinished = publicState?.status === "finished";
   const isRoundEnd = publicState?.status === "round_end";
   const isGameScreen = isPlaying || isFinished;
+  const isMeCutter =
+    isPlaying && !!me && publicState?.game?.currentCutterPlayerId === me.playerId;
   const screenClassName = !publicState
     ? "screen-setup"
     : publicState.status === "lobby"
@@ -463,7 +495,7 @@ export function App() {
               <div className="wire-grid">
                 {(privateState?.wires ?? []).map((wire) => (
                   <div key={wire.slotIndex} className="wire-card revealed">
-                    {wireLabel(wire.card)}
+                    <img src={cardImageSrc(wire.card)} alt={wireLabel(wire.card)} />
                   </div>
                 ))}
               </div>
@@ -508,9 +540,9 @@ export function App() {
                 次のラウンドに進むと新しい手札が配られます。<br />
                 手元の端末が見えないようにしてから進んでください。
               </p>
-              <p className="subtle round-end-stats">
-                解除 {publicState.game?.defuseFoundCount ?? 0} / {publicState.game?.requiredDefuseTotal ?? 0}
-              </p>
+              {publicState.game?.lastRoundEnded ? (
+                <RoundDigest publicState={publicState} round={publicState.game.lastRoundEnded} />
+              ) : null}
               <div className="actions">
                 <button
                   className="primary"
@@ -528,9 +560,11 @@ export function App() {
           {isGameScreen ? (
             <section className={`game-stage ${isFinished ? "game-stage-finished" : ""}`}>
               <div className="game-overlay game-overlay-top">
-                <span>R{publicState.game?.currentRound}</span>
-                <span>解除残り {defuseLeft}</span>
-                {isPlaying ? <span>ニッパー: {currentCutterName}</span> : null}
+                <span className="round-pill">R{publicState.game?.currentRound}</span>
+                <DefuseProgress
+                  found={publicState.game?.defuseFoundCount ?? 0}
+                  total={publicState.game?.requiredDefuseTotal ?? 0}
+                />
               </div>
 
               <div className="game-overlay game-overlay-actions">
@@ -543,10 +577,23 @@ export function App() {
               </div>
 
               {isPlaying ? (
-                <div className="game-hint">
-                  {publicState.game?.currentCutterPlayerId === me?.playerId
-                    ? "他プレイヤーの端末でカードを選んでください"
-                    : "この端末では自分のカードだけを操作できます"}
+                <div className={`cutter-banner ${isMeCutter ? "is-me" : "is-other"}`}>
+                  <img src={nipperImg} alt="ニッパー" className="cutter-nipper-img" draggable={false} />
+                  <div className="cutter-info">
+                    <span className="cutter-label">ニッパー</span>
+                    <strong className="cutter-name">
+                      {currentCutterName}
+                      {isMeCutter ? " (あなた)" : ""}
+                    </strong>
+                  </div>
+                </div>
+              ) : null}
+
+              {isPlaying ? (
+                <div className={`play-instruction ${isMeCutter ? "me-turn" : "other-turn"}`}>
+                  {isMeCutter
+                    ? "別の人の端末を受け取り、切りたいカードを選んでください"
+                    : `${currentCutterName}さんにこの端末を渡してください`}
                 </div>
               ) : null}
 
@@ -607,15 +654,21 @@ export function App() {
               >
                 {myPublicSlots.map((slot) => {
                   const label = slot.isRevealed ? wireLabel(slot.revealedCard ?? "silent") : "裏";
+                  const imgSrc = slot.isRevealed
+                    ? cardImageSrc(slot.revealedCard ?? "silent")
+                    : cardBackImg;
 
                   return (
                     <button
                       key={slot.slotIndex}
-                      className={`player-card-face ${slot.isRevealed ? "revealed" : "hidden"}`}
+                      className={`player-card-face ${slot.isRevealed ? "revealed" : "hidden"} ${
+                        canBeCutOnMyDevice && !slot.isRevealed ? "cuttable" : ""
+                      }`}
                       disabled={!canBeCutOnMyDevice || slot.isRevealed || publicState.game?.currentCutterPlayerId === null}
                       onClick={() => me && handleCut(me.playerId, slot.slotIndex)}
+                      aria-label={label}
                     >
-                      {label}
+                      <img src={imgSrc} alt={label} draggable={false} />
                     </button>
                   );
                 })}
@@ -646,12 +699,20 @@ export function App() {
         <Modal title="導線再確認" onClose={() => setShowWires(false)}>
           <div className="wire-grid">
             {(privateState?.wires ?? []).map((wire) => (
-              <div key={wire.slotIndex} className={`wire-card ${wire.isRevealed ? "revealed" : "hidden"}`}>
-                {wireLabel(wire.card)}
+              <div key={wire.slotIndex} className={`wire-card revealed ${wire.isRevealed ? "cut" : ""}`}>
+                <img src={cardImageSrc(wire.card)} alt={wireLabel(wire.card)} />
+                {wire.isRevealed ? <span className="wire-cut-badge">切済</span> : null}
               </div>
             ))}
           </div>
         </Modal>
+      ) : null}
+
+      {showBoomFlash ? (
+        <div className="boom-flash" aria-hidden>
+          <img src={cardBoomImg} alt="" className="boom-flash-card" draggable={false} />
+          <div className="boom-flash-text">BOOM!</div>
+        </div>
       ) : null}
 
       {confirmDialog ? (
@@ -674,6 +735,101 @@ export function App() {
             </button>
           </div>
         </Modal>
+      ) : null}
+    </div>
+  );
+}
+
+function DefuseProgress({ found, total }: { found: number; total: number }) {
+  const safeTotal = Math.max(total, 1);
+  const pct = Math.min(100, Math.round((found / safeTotal) * 100));
+  return (
+    <div
+      className="defuse-gauge"
+      role="progressbar"
+      aria-valuenow={found}
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-label={`解除進捗 ${found} / ${total}`}
+    >
+      <img src={cardDefuseImg} alt="" className="defuse-gauge-icon" draggable={false} />
+      <div className="defuse-gauge-bar">
+        <div className="defuse-gauge-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="defuse-gauge-count">
+        {found}/{total}
+      </span>
+    </div>
+  );
+}
+
+function RoundDigest({
+  publicState,
+  round,
+}: {
+  publicState: PublicRoomState;
+  round: number;
+}) {
+  const game = publicState.game;
+  if (!game) return null;
+
+  const events = game.publicEvents.filter(
+    (event) => event.type === "cut_result" && event.round === round,
+  );
+
+  let defuseCount = 0;
+  let silentCount = 0;
+  events.forEach((event) => {
+    if (event.resultCard === "defuse") defuseCount += 1;
+    else if (event.resultCard === "silent") silentCount += 1;
+  });
+
+  const playersById = new Map(publicState.players.map((p) => [p.id, p.name]));
+
+  return (
+    <div className="round-digest">
+      <div className="round-digest-stats">
+        <div className="round-digest-stat digest-defuse">
+          <img src={cardDefuseImg} alt="" draggable={false} />
+          <span className="digest-stat-value">+{defuseCount}</span>
+          <span className="digest-stat-label">解除</span>
+        </div>
+        <div className="round-digest-stat digest-silent">
+          <img src={cardSilentImg} alt="" draggable={false} />
+          <span className="digest-stat-value">{silentCount}</span>
+          <span className="digest-stat-label">しーん</span>
+        </div>
+        <div className="round-digest-stat digest-total">
+          <span className="digest-stat-value">
+            {game.defuseFoundCount}/{game.requiredDefuseTotal}
+          </span>
+          <span className="digest-stat-label">累計解除</span>
+        </div>
+      </div>
+
+      {events.length > 0 ? (
+        <ol className="round-digest-log">
+          {events.map((event, index) => {
+            const actorName = event.actorPlayerId ? playersById.get(event.actorPlayerId) ?? "?" : "?";
+            const targetName = event.targetPlayerId ? playersById.get(event.targetPlayerId) ?? "?" : "?";
+            const resultLabel =
+              event.resultCard === "defuse"
+                ? "解除"
+                : event.resultCard === "boom"
+                  ? "BOOM"
+                  : "しーん";
+            const resultClass = `digest-result-${event.resultCard ?? "silent"}`;
+            return (
+              <li key={`${event.timestamp}-${index}`} className="round-digest-log-item">
+                <span className="digest-log-order">{index + 1}</span>
+                <span className="digest-log-actor">{actorName}</span>
+                <span className="digest-log-arrow">→</span>
+                <span className="digest-log-target">{targetName}</span>
+                <span className={`digest-log-result ${resultClass}`}>{resultLabel}</span>
+              </li>
+            );
+          })}
+        </ol>
       ) : null}
     </div>
   );

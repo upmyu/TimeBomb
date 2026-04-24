@@ -1,10 +1,25 @@
 :root {
   color-scheme: light;
   font-family: "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  /* 世界観カラー: 配線の銅/真鍮, 基板の深紺/ティール, 危険の赤 */
+  --color-ink: #1a1510;
+  --color-copper: #b8844a;
+  --color-copper-deep: #8a5d2c;
+  --color-danger: #a83b24;
+  --color-danger-soft: rgba(168, 59, 36, 0.15);
+  --color-safe: #2e7d47;
+  --color-safe-soft: rgba(46, 125, 71, 0.18);
+  --color-panel: rgba(255, 251, 245, 0.82);
+  --color-panel-stroke: rgba(138, 93, 44, 0.22);
+  --color-dark: #17110d;
+  --color-dark-stroke: rgba(232, 218, 195, 0.18);
+
   background:
-    radial-gradient(circle at top left, rgba(241, 196, 15, 0.2), transparent 30%),
-    linear-gradient(180deg, #f7f2e8 0%, #efe6d3 100%);
-  color: #1f1b16;
+    radial-gradient(circle at top left, rgba(241, 196, 15, 0.18), transparent 32%),
+    radial-gradient(circle at 80% 10%, rgba(168, 59, 36, 0.08), transparent 38%),
+    radial-gradient(circle at 15% 90%, rgba(62, 96, 110, 0.1), transparent 44%),
+    linear-gradient(180deg, #f4ecdd 0%, #e7dbc3 100%);
+  color: var(--color-ink);
 }
 
 * {
@@ -27,20 +42,29 @@ button {
   border: 0;
   border-radius: 12px;
   padding: 0.6rem 1rem;
-  background: #dcc9aa;
+  background: linear-gradient(180deg, #e4d0ae, #cfb78e);
   color: #201913;
   cursor: pointer;
   font-size: 0.98rem;
   font-weight: 600;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 2px 6px rgba(100, 70, 35, 0.2);
 }
 
 button.primary {
-  background: #a83b24;
+  background: linear-gradient(180deg, #c04a32 0%, #9a2f1c 100%);
   color: #fff8f2;
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   padding: 0.65rem 1.1rem;
+  box-shadow:
+    0 1px 0 rgba(255, 200, 180, 0.35) inset,
+    0 -2px 0 rgba(60, 10, 0, 0.35) inset,
+    0 4px 14px rgba(168, 59, 36, 0.35);
+}
+
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.05);
 }
 
 button:disabled {
@@ -87,13 +111,22 @@ select {
 
 .hero h1 {
   font-size: clamp(1.5rem, 2.5vw, 2.15rem);
+  letter-spacing: 0.02em;
+}
+
+.hero h1::before {
+  content: "⟐ ";
+  color: var(--color-copper);
+  letter-spacing: 0;
 }
 
 .eyebrow {
   margin: 0 0 0.25rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #7c5039;
+  letter-spacing: 0.22em;
+  color: var(--color-copper-deep);
+  font-weight: 700;
+  font-size: 0.78rem;
 }
 
 .subtle {
@@ -103,11 +136,29 @@ select {
 
 .panel,
 .subpanel {
-  background: rgba(255, 251, 245, 0.8);
-  border: 1px solid rgba(99, 70, 50, 0.14);
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-stroke);
   border-radius: 22px;
   padding: 0.85rem;
   backdrop-filter: blur(10px);
+  box-shadow: 0 2px 0 rgba(184, 132, 74, 0.12) inset, 0 8px 24px rgba(60, 40, 20, 0.08);
+}
+
+/* パネル上部に銅色のアクセントライン */
+.panel {
+  position: relative;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-copper) 30%, var(--color-copper) 70%, transparent);
+  border-radius: 2px;
+  opacity: 0.7;
 }
 
 .panel {
@@ -138,10 +189,16 @@ select {
 
 .badge,
 .stats span {
-  background: #f3e4c4;
+  background: linear-gradient(180deg, #e9d4ab, #d2b583);
+  color: #3d2a17;
+  border: 1px solid rgba(138, 93, 44, 0.35);
   border-radius: 999px;
-  padding: 0.45rem 0.75rem;
-  font-size: 0.95rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 rgba(255, 245, 220, 0.6) inset;
 }
 
 .stats {
@@ -170,7 +227,14 @@ select {
 }
 
 .player-card.host {
-  outline: 2px solid #a83b24;
+  outline: 2px solid var(--color-copper);
+  box-shadow: 0 0 0 4px rgba(184, 132, 74, 0.15);
+}
+
+.player-card.host strong::after {
+  content: " ♛";
+  color: var(--color-copper-deep);
+  font-size: 0.9em;
 }
 
 .player-card strong {
@@ -214,12 +278,26 @@ select {
 }
 
 .wire-card {
+  position: relative;
   min-height: 88px;
+  /* カード画像の実アスペクト比 (505:880) に合わせて余白ゼロで収める */
+  aspect-ratio: 505 / 880;
   display: grid;
   place-items: center;
   border-radius: 18px;
   border: 1px solid #8d7658;
   font-weight: 700;
+  overflow: hidden;
+  background: #f8f1de;
+}
+
+.wire-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .wire-card.hidden {
@@ -235,6 +313,24 @@ select {
 
 .wire-card.revealed {
   background: #f8f1de;
+}
+
+/* 自分の手札モーダル: 既に切られた枚の視覚マーク */
+.wire-card.cut img {
+  filter: grayscale(0.7) brightness(0.72);
+}
+
+.wire-cut-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  background: rgba(168, 59, 36, 0.92);
+  color: #fff8f2;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
 }
 
 .summary-row {
@@ -353,6 +449,226 @@ select {
   font-size: 0.9rem;
 }
 
+.round-pill {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-copper) !important;
+  border-color: rgba(184, 132, 74, 0.4) !important;
+  background: rgba(20, 14, 10, 0.5) !important;
+}
+
+/* 解除プログレスゲージ: 配線が徐々に光って安全になっていくイメージ */
+.defuse-gauge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.32rem 0.75rem 0.32rem 0.32rem;
+  background: rgba(20, 14, 10, 0.55);
+  border: 1px solid rgba(184, 132, 74, 0.4);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+}
+
+.defuse-gauge-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  object-fit: contain;
+  border-radius: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(184, 132, 74, 0.4);
+}
+
+.defuse-gauge-bar {
+  position: relative;
+  width: clamp(60px, 14vw, 120px);
+  height: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    rgba(168, 59, 36, 0.45),
+    rgba(201, 133, 60, 0.35)
+  );
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+}
+
+.defuse-gauge-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #66c27a,
+    #3fa85c 60%,
+    #2e7d47
+  );
+  box-shadow: 0 0 8px rgba(102, 194, 122, 0.7);
+  transition: width 0.45s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.defuse-gauge-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem !important;
+  font-weight: 700;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  color: #f8f0e4 !important;
+}
+
+/* ラウンド終了ダイジェスト: ミッションレポート風 */
+.round-digest {
+  width: min(28rem, 92%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.round-digest-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.round-digest-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.55rem 0.45rem;
+  background: rgba(248, 240, 228, 0.06);
+  border: 1px solid rgba(248, 240, 228, 0.14);
+  border-radius: 14px;
+}
+
+.round-digest-stat img {
+  width: 2.1rem;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(184, 132, 74, 0.35);
+}
+
+.digest-stat-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #f8f0e4;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.digest-stat-label {
+  font-size: 0.72rem;
+  color: #cbbca4;
+  letter-spacing: 0.08em;
+}
+
+.round-digest-stat.digest-defuse {
+  background: rgba(46, 125, 71, 0.18);
+  border-color: rgba(102, 194, 122, 0.3);
+}
+
+.round-digest-stat.digest-silent {
+  background: rgba(60, 72, 90, 0.22);
+  border-color: rgba(160, 180, 210, 0.22);
+}
+
+.round-digest-stat.digest-total {
+  background: rgba(184, 132, 74, 0.16);
+  border-color: rgba(184, 132, 74, 0.35);
+  justify-content: center;
+}
+
+.round-digest-stat.digest-total img {
+  display: none;
+}
+
+.round-digest-stat.digest-total .digest-stat-value {
+  font-size: 1.25rem;
+}
+
+/* 切った履歴のログ (ラウンド中の時系列) */
+.round-digest-log {
+  list-style: none;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed rgba(184, 132, 74, 0.3);
+  border-radius: 12px;
+  max-height: 26vh;
+  overflow-y: auto;
+}
+
+.round-digest-log-item {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr auto 1fr auto;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #e3d8c7;
+  padding: 0.2rem 0.35rem;
+  border-radius: 8px;
+}
+
+.round-digest-log-item:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.digest-log-order {
+  font-size: 0.72rem;
+  color: var(--color-copper);
+  font-weight: 700;
+  text-align: center;
+}
+
+.digest-log-actor,
+.digest-log-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.digest-log-target {
+  text-align: right;
+}
+
+.digest-log-arrow {
+  color: #8a7a65;
+  font-size: 0.9rem;
+}
+
+.digest-log-result {
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.08rem 0.5rem;
+  border-radius: 999px;
+  min-width: 3.4rem;
+  text-align: center;
+}
+
+.digest-result-defuse {
+  background: rgba(102, 194, 122, 0.25);
+  color: #cde9d0;
+  border: 1px solid rgba(102, 194, 122, 0.45);
+}
+
+.digest-result-silent {
+  background: rgba(160, 180, 210, 0.16);
+  color: #d5dae4;
+  border: 1px solid rgba(160, 180, 210, 0.3);
+}
+
+.digest-result-boom {
+  background: rgba(168, 59, 36, 0.45);
+  color: #fff2ea;
+  border: 1px solid rgba(255, 150, 120, 0.6);
+}
+
 .game-overlay-actions {
   top: 0.9rem;
   right: 0.9rem;
@@ -381,6 +697,163 @@ select {
   width: min(78vw, 460px);
 }
 
+/* 現在のニッパー保持者バナー(画面上部中央) */
+.cutter-banner {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.9rem 0.4rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(20, 14, 10, 0.6);
+  border: 1px solid rgba(248, 240, 228, 0.22);
+  color: #f8f0e4;
+  backdrop-filter: blur(10px);
+  max-width: min(72vw, 520px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+}
+
+.cutter-banner.is-me {
+  background: rgba(168, 59, 36, 0.85);
+  border-color: rgba(255, 210, 170, 0.55);
+  box-shadow: 0 4px 20px rgba(168, 59, 36, 0.5);
+  animation: cutter-banner-me-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes cutter-banner-me-pulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(168, 59, 36, 0.5); }
+  50%      { box-shadow: 0 4px 30px rgba(255, 170, 130, 0.75); }
+}
+
+.cutter-nipper-img {
+  width: 2.2rem;
+  height: 2.2rem;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+
+.cutter-banner.is-me .cutter-nipper-img {
+  transform: rotate(-14deg);
+}
+
+.cutter-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.cutter-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.cutter-name {
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 大きめアクションヒント: 「あなたの番」と「他人の番」で色分け */
+.play-instruction {
+  position: fixed;
+  left: 50%;
+  bottom: 0.9rem;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 0.7rem 1.1rem;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.35;
+  width: min(86vw, 560px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(248, 240, 228, 0.2);
+}
+
+.play-instruction.me-turn {
+  background: rgba(168, 59, 36, 0.78);
+  color: #fff8f2;
+  border-color: rgba(255, 210, 170, 0.5);
+}
+
+.play-instruction.other-turn {
+  background: rgba(36, 96, 40, 0.62);
+  color: #eaffe6;
+  border-color: rgba(180, 240, 180, 0.38);
+}
+
+/* BOOM 爆発フラッシュ (全画面, 数秒) */
+.boom-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 180, 80, 0.95) 0%,
+    rgba(220, 60, 30, 0.95) 40%,
+    rgba(60, 10, 5, 0.96) 100%
+  );
+  animation: boom-flash-fade 2.4s ease-out forwards;
+}
+
+.boom-flash-card {
+  width: min(60vw, 360px);
+  height: auto;
+  border-radius: 24px;
+  box-shadow: 0 0 80px rgba(255, 180, 80, 0.9);
+  animation: boom-flash-card-pop 2.4s cubic-bezier(0.22, 1.35, 0.44, 1) forwards;
+}
+
+.boom-flash-text {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(3rem, 12vw, 7rem);
+  font-weight: 900;
+  color: #fff8f2;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 24px rgba(255, 120, 40, 0.95), 0 6px 14px rgba(0, 0, 0, 0.5);
+  animation: boom-flash-text-pop 2.4s cubic-bezier(0.22, 1.35, 0.44, 1) forwards;
+}
+
+@keyframes boom-flash-fade {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes boom-flash-card-pop {
+  0%   { transform: scale(0.4) rotate(-20deg); opacity: 0; }
+  18%  { transform: scale(1.18) rotate(4deg); opacity: 1; }
+  30%  { transform: scale(1) rotate(0); }
+  100% { transform: scale(1.08) rotate(0); opacity: 0.95; }
+}
+
+@keyframes boom-flash-text-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+  22%  { transform: translate(-50%, -50%) scale(1.25); opacity: 1; }
+  32%  { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.95; }
+}
+
 .card-stage {
   --card-count: 5;
   --card-gap: min(1.2vw, 0.9rem);
@@ -392,42 +865,70 @@ select {
   align-items: center;
   justify-content: center;
   gap: var(--card-gap);
-  padding: 3.2rem 1rem 2.6rem;
+  padding: 4.2rem 1rem 4.2rem;
   overflow: hidden;
 }
 
 .player-card-face {
-  height: min(76vh, calc(var(--card-max-width) * 1.4), 560px);
+  position: relative;
+  /* カード縦サイズは card-stage の上下パディング(4.2rem×2)を差し引いた可用領域に収める。
+     画像自然比(505:880)に合わせるため、幅上限を少し広めに取って高さ基準で決まるようにする */
+  height: min(calc(100vh - 9rem), calc(var(--card-max-width) * 1.74), 560px);
   width: auto;
   min-width: 84px;
   max-width: min(var(--card-max-width), 400px);
-  aspect-ratio: 5 / 7;
+  aspect-ratio: 505 / 880;
+  padding: 0;
   display: grid;
   place-items: center;
   border-radius: 20px;
   border: 1px solid rgba(232, 218, 195, 0.22);
-  font-size: clamp(0.9rem, 1.4vw, 1.15rem);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  overflow: hidden;
+  background: #241b15;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease;
+  outline: 2px solid transparent;
+  outline-offset: 0;
+}
+
+.player-card-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .player-card-face.hidden {
-  background:
-    linear-gradient(145deg, rgba(225, 196, 140, 0.2), rgba(80, 52, 32, 0.3)),
-    repeating-linear-gradient(
-      135deg,
-      #5f4232,
-      #5f4232 14px,
-      #7b5843 14px,
-      #7b5843 28px
-    );
-  color: #fff4df;
+  /* 裏面画像 (04_bomb) を暗地にフィットさせる。contain でも違和感のない背景色 */
+  background: #1a120d;
 }
 
 .player-card-face.revealed {
   background: #f5e9d2;
-  color: #221b16;
+}
+
+/* 自分のカードが切られる側の瞬間: 切れるカードにリング */
+.player-card-face.cuttable:not(:disabled) {
+  outline-color: rgba(255, 210, 120, 0.9);
+  box-shadow: 0 0 0 4px rgba(255, 210, 120, 0.25), 0 20px 40px rgba(0, 0, 0, 0.35);
+  animation: cuttable-pulse 1.8s ease-in-out infinite;
+}
+
+.player-card-face.cuttable:not(:disabled):hover,
+.player-card-face.cuttable:not(:disabled):active {
+  transform: translateY(-2px) scale(1.015);
+}
+
+@keyframes cuttable-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(255, 210, 120, 0.20), 0 20px 40px rgba(0, 0, 0, 0.35); }
+  50%      { box-shadow: 0 0 0 8px rgba(255, 210, 120, 0.38), 0 20px 40px rgba(0, 0, 0, 0.35); }
+}
+
+.player-card-face:disabled img {
+  filter: brightness(0.85);
 }
 
 .game-finish-panel {
