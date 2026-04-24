@@ -156,6 +156,29 @@ export function attachRealtimeServer(_app: express.Express, httpServer: HttpServ
           broadcastRoomState(room.roomCode);
           return;
         }
+        case "round:ack": {
+          const room = roomStore.ackRound(message.payload.roomCode, message.payload.playerId, message.payload.sessionToken);
+          broadcastRoomState(room.roomCode);
+          return;
+        }
+        case "game:ready_for_next": {
+          const room = roomStore.readyForNext(
+            message.payload.roomCode,
+            message.payload.playerId,
+            message.payload.sessionToken,
+          );
+          broadcastRoomState(room.roomCode);
+          return;
+        }
+        case "game:leave": {
+          const room = roomStore.leave(
+            message.payload.roomCode,
+            message.payload.playerId,
+            message.payload.sessionToken,
+          );
+          broadcastRoomState(room.roomCode);
+          return;
+        }
         default: {
           send(socket, { type: "room:error", payload: { message: "未対応の操作です。" } });
         }

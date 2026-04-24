@@ -156,6 +156,9 @@ function makeInitialGameState(room: Room, initialCutterPlayerId: string | null):
     wiresByPlayer: {},
     roundDeck: createInitialWireDeck(room.players.length),
     wireRevealAckPlayerIds: [],
+    roundEndAckPlayerIds: [],
+    lastRoundEnded: null,
+    readyForNextPlayerIds: [],
     publicEvents: [],
   };
 }
@@ -390,19 +393,109 @@ export function cutWire(
       return;
     }
 
+    // ラウンド終了ack画面へ。全員のackを待ってから次ラウンドを配る
+    // (次ラウンド配布前に他人の端末が覗かれて手札が露見するのを防ぐ)
+    room.game.lastRoundEnded = room.game.currentRound as 1 | 2 | 3;
+    room.game.roundEndAckPlayerIds = [];
+    room.status = "round_end";
+    room.updatedAt = now();
+    return;
+  }
+
+  room.game.currentCutterPlayerId = targetPlayerId;
+  room.updatedAt = now();
+}
+
+export function acknowledgeRoundEnd(room: Room, playerId: string, sessionToken: string): void {
+  assertPlayerAuth(room, playerId, sessionToken);
+  if (room.status !== "round_end" || !room.game) {
+    throw new GameRuleError("今はラウンド終了確認フェーズではありません。");
+  }
+
+  if (!room.game.roundEndAckPlayerIds.includes(playerId)) {
+    room.game.roundEndAckPlayerIds.push(playerId);
+  }
+
+  if (room.game.roundEndAckPlayerIds.length === room.players.length) {
     const nextRoundDeck = collectUnrevealedCards(room.game);
     const nextRound = (room.game.currentRound + 1) as 2 | 3 | 4;
     room.game.currentRound = nextRound;
     room.game.cutCountInRound = 0;
     room.game.roundDeck = nextRoundDeck;
     room.game.currentCutterPlayerId = room.game.lastCutPlayerId;
+    room.game.roundEndAckPlayerIds = [];
     startRound(room.game);
     room.status = "wire_reveal";
-    room.updatedAt = now();
+  }
+
+  room.updatedAt = now();
+}
+
+export function readyForNext(room: Room, playerId: string, sessionToken: string): void {
+  assertPlayerAuth(room, playerId, sessionToken);
+  if (room.status !== "finished" || !room.game) {
+    throw new GameRuleError("ゲーム終了後のみ再戦準備ができます。");
+  }
+
+  if (!room.game.readyForNextPlayerIds.includes(playerId)) {
+    room.game.readyForNextPlayerIds.push(playerId);
+  }
+
+  // 現時点で残っている全員が「準備完了」を押したらロビーへ戻す。
+  // 既に抜けた人(leaveRoomで players から除かれた人)は数に入らない。
+  const allReady = room.players.every((player) => room.game!.readyForNextPlayerIds.includes(player.id));
+  if (allReady && room.players.length >= 1) {
+    room.game = null;
+    room.status = "lobby";
+  }
+
+  room.updatedAt = now();
+}
+
+export function leaveRoom(room: Room, playerId: string, sessionToken: string): void {
+  assertPlayerAuth(room, playerId, sessionToken);
+
+  const leavingIndex = room.players.findIndex((player) => player.id === playerId);
+  if (leavingIndex === -1) {
     return;
   }
 
-  room.game.currentCutterPlayerId = targetPlayerId;
+  const wasHost = room.hostPlayerId === playerId;
+  room.players.splice(leavingIndex, 1);
+
+  // 参加者が残っていればホスト引き継ぎ、居なければルーム自体は残骸になるが
+  // 次の接続時に cleanup される想定(MVPでは明示削除しない)。
+  if (wasHost && room.players.length > 0) {
+    room.hostPlayerId = room.players[0].id;
+  }
+
+  // ゲーム状態から抜けた人の痕跡を掃除して、残ったメンバーで「準備完了」条件が満たされ
+  // 得るようにする。finished フェーズ以外で抜けるケース(MVPでは想定薄)はロビー戻しで済ませる。
+  if (room.game) {
+    room.game.readyForNextPlayerIds = room.game.readyForNextPlayerIds.filter((id) => id !== playerId);
+    room.game.roleRevealAckPlayerIds = room.game.roleRevealAckPlayerIds.filter((id) => id !== playerId);
+    room.game.wireRevealAckPlayerIds = room.game.wireRevealAckPlayerIds.filter((id) => id !== playerId);
+    room.game.roundEndAckPlayerIds = room.game.roundEndAckPlayerIds.filter((id) => id !== playerId);
+    room.game.playerOrder = room.game.playerOrder.filter((id) => id !== playerId);
+    delete room.game.roleAssignments[playerId];
+    delete room.game.wiresByPlayer[playerId];
+
+    if (room.status === "finished") {
+      // 残ったメンバーが全員「準備完了」なら即ロビーへ。
+      const allReady =
+        room.players.length > 0 &&
+        room.players.every((player) => room.game!.readyForNextPlayerIds.includes(player.id));
+      if (allReady) {
+        room.game = null;
+        room.status = "lobby";
+      }
+    } else {
+      // ゲーム進行中に抜けた場合はロビーに戻す(MVP簡略化)。
+      room.game = null;
+      room.status = "lobby";
+    }
+  }
+
   room.updatedAt = now();
 }
 
@@ -449,6 +542,9 @@ function getPublicGameState(room: Room): PublicGameState {
     finishReason: game.finishReason,
     roleRevealAckPlayerIds: game.roleRevealAckPlayerIds,
     wireRevealAckPlayerIds: game.wireRevealAckPlayerIds,
+    roundEndAckPlayerIds: game.roundEndAckPlayerIds,
+    lastRoundEnded: game.lastRoundEnded,
+    readyForNextPlayerIds: game.readyForNextPlayerIds,
     publicEvents: game.publicEvents,
     publicWiresByPlayer,
     roleAssignmentsAtEnd: room.status === "finished" ? game.roleAssignments : null,

@@ -25,16 +25,22 @@ select {
 
 button {
   border: 0;
-  border-radius: 14px;
-  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
   background: #dcc9aa;
   color: #201913;
   cursor: pointer;
+  font-size: 0.98rem;
+  font-weight: 600;
 }
 
 button.primary {
   background: #a83b24;
   color: #fff8f2;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.65rem 1.1rem;
 }
 
 button:disabled {
@@ -56,9 +62,10 @@ select {
   height: 100vh;
   padding: 0.85rem 0 0.9rem;
   overflow: hidden;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .app-shell-game {
@@ -239,6 +246,7 @@ select {
 .modal-backdrop {
   position: fixed;
   inset: 0;
+  z-index: 50;
   background: rgba(24, 20, 17, 0.45);
   display: grid;
   place-items: center;
@@ -374,20 +382,25 @@ select {
 }
 
 .card-stage {
+  --card-count: 5;
+  --card-gap: min(1.2vw, 0.9rem);
+  --card-max-width: calc(
+    (100vw - 5.6rem - var(--card-gap) * (var(--card-count) - 1)) / var(--card-count)
+  );
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: min(1.2vw, 0.9rem);
+  gap: var(--card-gap);
   padding: 3.2rem 1rem 2.6rem;
   overflow: hidden;
 }
 
 .player-card-face {
-  height: min(76vh, calc((100vw - 5.6rem) / 5 * 1.4));
+  height: min(76vh, calc(var(--card-max-width) * 1.4), 560px);
   width: auto;
   min-width: 84px;
-  max-width: 19vw;
+  max-width: min(var(--card-max-width), 400px);
   aspect-ratio: 5 / 7;
   display: grid;
   place-items: center;
@@ -436,18 +449,32 @@ select {
 
 .game-finish-roles {
   position: fixed;
+  left: 0.9rem;
   right: 0.9rem;
   bottom: 0.9rem;
   z-index: 5;
-  width: min(280px, calc(42vw));
-  max-height: 34vh;
+  max-height: 28vh;
   background: rgba(248, 240, 228, 0.1);
   border: 1px solid rgba(248, 240, 228, 0.14);
   border-radius: 18px;
-  padding: 0.75rem;
-  display: grid;
-  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.8rem;
   overflow: auto;
+}
+
+.game-finish-roles .summary-row {
+  gap: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(248, 240, 228, 0.08);
+  font-size: 0.88rem;
+}
+
+.game-stage-finished .card-stage {
+  padding-bottom: calc(28vh + 1.2rem);
 }
 
 .screen-setup .split,
@@ -461,10 +488,26 @@ select {
   padding-bottom: 0.4rem;
 }
 
+/* 初期画面: 中身の合計が viewport に収まるよう自動サイズ、余白でバランス */
 .screen-setup .panel {
-  height: calc(100vh - 7.5rem);
+  max-height: calc(100vh - 5.5rem);
+  overflow: auto;
   display: grid;
   align-content: start;
+  gap: 0.6rem;
+}
+
+.screen-setup .subpanel {
+  padding: 0.7rem 0.85rem;
+}
+
+.screen-setup .subpanel h2 {
+  font-size: 1.05rem;
+}
+
+.screen-setup .field input,
+.screen-setup .field select {
+  padding: 0.6rem 0.75rem;
 }
 
 .screen-lobby .hero {
@@ -472,7 +515,7 @@ select {
 }
 
 .screen-lobby .panel {
-  height: calc(100vh - 7.2rem);
+  max-height: calc(100vh - 5.5rem);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   overflow: hidden;
@@ -480,21 +523,25 @@ select {
 
 .screen-lobby .player-list {
   align-content: start;
-  overflow: hidden;
+  overflow-y: auto;
+  grid-auto-rows: minmax(64px, auto);
 }
 
 .screen-role,
-.screen-wire {
+.screen-wire,
+.screen-round-end {
   width: min(900px, calc(100vw - 1.2rem));
 }
 
 .screen-role .hero,
-.screen-wire .hero {
+.screen-wire .hero,
+.screen-round-end .hero {
   display: none;
 }
 
 .screen-role .panel,
-.screen-wire .panel {
+.screen-wire .panel,
+.screen-round-end .panel {
   margin-top: 0;
   height: calc(100vh - 1.2rem);
   display: grid;
@@ -511,6 +558,195 @@ select {
 .screen-wire .wire-grid {
   width: min(92vw, 760px);
   grid-template-columns: repeat(5, minmax(72px, 1fr));
+}
+
+/* 役職/導線/ラウンド終了 画面の上部コンパクトヘッダー */
+.confirm-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.confirm-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #3b2c1f;
+}
+
+.confirm-round {
+  font-size: 0.8rem;
+  color: #7c5039;
+  margin-left: 0.25rem;
+}
+
+.ack-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.ack-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(168, 59, 36, 0.12);
+  color: #a83b24;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  line-height: 1.4;
+}
+
+.ack-chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+.ack-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(99, 70, 50, 0.08);
+  font-size: 0.75rem;
+  color: #5a4b3e;
+  line-height: 1.4;
+}
+
+.ack-chip.acked {
+  background: rgba(46, 125, 50, 0.16);
+  color: #2e7d32;
+}
+
+.ack-chip.pending {
+  background: rgba(168, 59, 36, 0.08);
+  color: #7c5039;
+}
+
+.ack-chip.me {
+  outline: 1px solid currentColor;
+}
+
+.ack-mark {
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.ack-name {
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ラウンド終了画面 */
+.screen-round-end .panel {
+  background: rgba(34, 27, 22, 0.88);
+  color: #f8f0e4;
+  border-color: rgba(248, 240, 228, 0.14);
+}
+
+.screen-round-end .confirm-title {
+  color: #f8f0e4;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+}
+
+.screen-round-end .ack-count {
+  background: rgba(248, 240, 228, 0.18);
+  color: #f8f0e4;
+}
+
+.screen-round-end .ack-chip {
+  background: rgba(248, 240, 228, 0.08);
+  color: #e3d8c7;
+}
+
+.screen-round-end .ack-chip.acked {
+  background: rgba(126, 202, 129, 0.2);
+  color: #cde9d0;
+}
+
+.screen-round-end .ack-chip.pending {
+  background: rgba(248, 200, 140, 0.12);
+  color: #f6d9a8;
+}
+
+.round-end-message {
+  margin: 0;
+  max-width: 32rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.round-end-stats {
+  color: #cbbca4 !important;
+}
+
+/* ゲーム終了後の再戦/ホームボタン */
+.finish-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.finish-actions button {
+  padding: 0.5rem 0.9rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.finish-ready-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.finish-ready-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e3d8c7;
+  opacity: 0.85;
+}
+
+.game-finish-panel .ack-bar {
+  justify-content: center;
+}
+
+.game-finish-panel .ack-count {
+  background: rgba(248, 240, 228, 0.18);
+  color: #f8f0e4;
+}
+
+.game-finish-panel .ack-chip {
+  background: rgba(248, 240, 228, 0.08);
+  color: #e3d8c7;
+}
+
+.game-finish-panel .ack-chip.acked {
+  background: rgba(126, 202, 129, 0.2);
+  color: #cde9d0;
+}
+
+.game-finish-panel .ack-chip.pending {
+  background: rgba(248, 200, 140, 0.12);
+  color: #f6d9a8;
 }
 
 @media (max-width: 640px) {
@@ -533,7 +769,7 @@ select {
     overflow: auto;
   }
 
-  .app-shell {
+  .app-shell:not(.app-shell-game) {
     height: auto;
     min-height: 100vh;
     overflow: visible;
@@ -552,7 +788,100 @@ select {
   .screen-lobby .panel,
   .screen-setup .panel,
   .screen-role .panel,
-  .screen-wire .panel {
+  .screen-wire .panel,
+  .screen-round-end .panel {
     height: auto;
+  }
+}
+
+/* 横持ちで縦が短い画面(例: スマホ横持ち)でのはみ出し対策 */
+@media (orientation: landscape) and (max-height: 600px) {
+  body {
+    overflow: auto;
+  }
+
+  /* ゲーム画面(カード表示中・終了後)はフルスクリーンのまま保つ */
+  .app-shell:not(.app-shell-game) {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    padding: 0.4rem 0 0.5rem;
+  }
+
+  .hero {
+    padding: 0.1rem 0 0.25rem;
+  }
+
+  .hero h1 {
+    font-size: 1.05rem;
+    line-height: 1.15;
+  }
+
+  .hero .eyebrow,
+  .hero .subtle {
+    display: none;
+  }
+
+  .panel {
+    margin-top: 0.4rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 16px;
+  }
+
+  .stack {
+    gap: 0.45rem;
+  }
+
+  .split {
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .subpanel {
+    padding: 0.6rem 0.7rem;
+    border-radius: 14px;
+  }
+
+  .panel h2,
+  .subpanel h2 {
+    font-size: 1rem;
+  }
+
+  input,
+  select,
+  button {
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+  }
+
+  .field {
+    gap: 0.2rem;
+  }
+
+  .screen-setup .panel,
+  .screen-lobby .panel,
+  .screen-role .panel,
+  .screen-wire .panel,
+  .screen-round-end .panel {
+    height: auto;
+    min-height: 0;
+  }
+
+  .screen-lobby .player-list {
+    max-height: 40vh;
+  }
+
+  .screen-role .role-card {
+    padding: 0.7rem;
+    width: min(68vw, 320px);
+  }
+
+  .screen-wire .wire-grid {
+    width: min(92vw, 640px);
+    gap: 0.45rem;
+  }
+
+  .wire-card {
+    min-height: 62px;
   }
 }

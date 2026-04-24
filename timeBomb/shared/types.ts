@@ -3,6 +3,7 @@ export type RoomStatus =
   | "role_reveal"
   | "wire_reveal"
   | "playing"
+  | "round_end"
   | "finished";
 
 export type InitialCutterMode = "random" | "host_select";
@@ -64,6 +65,9 @@ export interface GameState {
   wiresByPlayer: Record<string, WireSlot[]>;
   roundDeck: WireCard[];
   wireRevealAckPlayerIds: string[];
+  roundEndAckPlayerIds: string[];
+  lastRoundEnded: 1 | 2 | 3 | null;
+  readyForNextPlayerIds: string[];
   publicEvents: PublicEvent[];
 }
 
@@ -97,6 +101,9 @@ export interface PublicGameState {
   finishReason: FinishReason;
   roleRevealAckPlayerIds: string[];
   wireRevealAckPlayerIds: string[];
+  roundEndAckPlayerIds: string[];
+  lastRoundEnded: 1 | 2 | 3 | null;
+  readyForNextPlayerIds: string[];
   publicEvents: PublicEvent[];
   publicWiresByPlayer: Record<string, PublicWireSlot[]>;
   roleAssignmentsAtEnd: Record<string, RoleCard> | null;
@@ -203,6 +210,30 @@ export type ClientMessage =
         actorPlayerId: string;
         targetPlayerId: string;
         slotIndex: number;
+      }
+    >
+  | RequestEnvelope<
+      "round:ack",
+      {
+        roomCode: string;
+        playerId: string;
+        sessionToken: string;
+      }
+    >
+  | RequestEnvelope<
+      "game:ready_for_next",
+      {
+        roomCode: string;
+        playerId: string;
+        sessionToken: string;
+      }
+    >
+  | RequestEnvelope<
+      "game:leave",
+      {
+        roomCode: string;
+        playerId: string;
+        sessionToken: string;
       }
     >;
 

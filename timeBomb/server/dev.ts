@@ -1,7 +1,12 @@
 import express from "express";
+import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
 import { attachRealtimeServer } from "./realtime";
+
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 async function startDevServer(): Promise<void> {
   const app = express();
@@ -19,18 +24,8 @@ async function startDevServer(): Promise<void> {
   app.use(async (request, response, next) => {
     try {
       const url = request.originalUrl;
-      const template = await vite.transformIndexHtml(url, `<!doctype html>
-<html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>タイムボム MVP</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>`);
+      const rawTemplate = await readFile(path.join(projectRoot, "index.html"), "utf-8");
+      const template = await vite.transformIndexHtml(url, rawTemplate);
       response.status(200).set({ "Content-Type": "text/html" }).end(template);
     } catch (error) {
       vite.ssrFixStacktrace(error as Error);

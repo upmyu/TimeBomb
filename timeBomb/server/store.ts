@@ -1,6 +1,7 @@
 import type { PlayerIdentity, Room } from "@shared/types";
 import {
   acknowledgeRole,
+  acknowledgeRoundEnd,
   acknowledgeWires,
   createRoom,
   cutWire,
@@ -9,7 +10,9 @@ import {
   getPrivateGameState,
   getPublicRoomState,
   joinRoom,
+  leaveRoom,
   reconnectPlayer,
+  readyForNext,
   rerollRoles,
   rerollWires,
   startGame,
@@ -91,6 +94,24 @@ export class RoomStore {
   ): Room {
     const room = this.requireRoom(roomCode);
     cutWire(room, playerId, sessionToken, actorPlayerId, targetPlayerId, slotIndex);
+    return room;
+  }
+
+  ackRound(roomCode: string, playerId: string, sessionToken: string): Room {
+    const room = this.requireRoom(roomCode);
+    acknowledgeRoundEnd(room, playerId, sessionToken);
+    return room;
+  }
+
+  readyForNext(roomCode: string, playerId: string, sessionToken: string): Room {
+    const room = this.requireRoom(roomCode);
+    readyForNext(room, playerId, sessionToken);
+    return room;
+  }
+
+  leave(roomCode: string, playerId: string, sessionToken: string): Room {
+    const room = this.requireRoom(roomCode);
+    leaveRoom(room, playerId, sessionToken);
     return room;
   }
 

@@ -44,8 +44,8 @@ function wireLabel(card: WireSlot["card"]): string {
 
 function buildWsUrl(): string {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const port = window.location.port === "5173" ? "3001" : window.location.port;
-  return `${protocol}://${window.location.hostname}:${port}`;
+  // dev も本番も WebSocket サーバーは HTTP と同じポートにアタッチされている
+  return `${protocol}://${window.location.host}`;
 }
 
 export function App() {
@@ -189,7 +189,13 @@ export function App() {
   function sendAuthenticated(type: ClientMessage["type"]): void {
     if (!me || !publicState) return;
 
-    if (type === "role:ack" || type === "role:reroll" || type === "wire:ack" || type === "wire:reroll") {
+    if (
+      type === "role:ack" ||
+      type === "role:reroll" ||
+      type === "wire:ack" ||
+      type === "wire:reroll" ||
+      type === "round:ack"
+    ) {
       send({
         type,
         payload: {
@@ -205,13 +211,59 @@ export function App() {
     setConfirmDialog({ message, onConfirm });
   }
 
-  function confirmAndSend(type: Extract<ClientMessage["type"], "role:ack" | "wire:ack">): void {
+  function confirmAndSend(type: Extract<ClientMessage["type"], "role:ack" | "wire:ack" | "round:ack">): void {
     const message =
       type === "role:ack"
         ? "役職の確認を完了しますか？"
-        : "導線の確認を完了しますか？";
+        : type === "wire:ack"
+          ? "導線の確認を完了しますか？"
+          : "次のラウンドに進みますか？";
 
     askConfirm(message, () => sendAuthenticated(type));
+  }
+
+  function handleReadyForNext(): void {
+    if (!me || !publicState) return;
+    send({
+      type: "game:ready_for_next",
+      payload: {
+        roomCode: publicState.roomCode,
+        playerId: me.playerId,
+        sessionToken: me.sessionToken,
+      },
+    });
+  }
+
+  function handleLeaveAndGoHome(): void {
+    // サーバーに leave を通知 (接続中の他プレイヤーから自分を消す)
+    if (me && publicState) {
+      send({
+        type: "game:leave",
+        payload: {
+          roomCode: publicState.roomCode,
+          playerId: me.playerId,
+          sessionToken: me.sessionToken,
+        },
+      });
+    }
+    // localStorageから当該ルームのidentityを消して接続をリセット
+    if (publicState) {
+      try {
+        const raw = window.localStorage.getItem(storageKey);
+        if (raw) {
+          const identities = JSON.parse(raw) as Record<string, PlayerIdentity>;
+          delete identities[publicState.roomCode];
+          window.localStorage.setItem(storageKey, JSON.stringify(identities));
+        }
+      } catch {
+        /* noop */
+      }
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("roomCode");
+    window.history.replaceState({}, "", url);
+    // leave メッセージが送られるタイミングを確保してからリロード
+    window.setTimeout(() => window.location.reload(), 80);
   }
 
   function handleCut(targetPlayerId: string, slotIndex: number): void {
@@ -241,6 +293,7 @@ export function App() {
   const isHost = !!me && !!publicState && publicState.hostPlayerId === me.playerId;
   const isPlaying = publicState?.status === "playing";
   const isFinished = publicState?.status === "finished";
+  const isRoundEnd = publicState?.status === "round_end";
   const isGameScreen = isPlaying || isFinished;
   const screenClassName = !publicState
     ? "screen-setup"
@@ -250,7 +303,9 @@ export function App() {
         ? "screen-role"
         : publicState.status === "wire_reveal"
           ? "screen-wire"
-          : "screen-game";
+          : publicState.status === "round_end"
+            ? "screen-round-end"
+            : "screen-game";
   const currentCutterName = publicState?.game?.currentCutterPlayerId
     ? playersById.get(publicState.game.currentCutterPlayerId)?.name ?? "不明"
     : "-";
@@ -327,7 +382,7 @@ export function App() {
         </section>
       ) : (
         <>
-          {!isGameScreen ? (
+          {publicState.status === "lobby" ? (
             <section className="panel stack">
               <div className="headline-row">
                 <div>
@@ -349,29 +404,43 @@ export function App() {
                 ))}
               </div>
 
-              {publicState.status === "lobby" ? (
-                <LobbyControls
-                  publicState={publicState}
-                  isHost={isHost}
-                  onStart={handleStartGame}
-                />
-              ) : null}
+              <LobbyControls
+                publicState={publicState}
+                isHost={isHost}
+                onStart={handleStartGame}
+              />
             </section>
           ) : null}
 
           {publicState.status === "role_reveal" ? (
             <section className="panel stack">
-              <h2>役職確認</h2>
+              <div className="confirm-header">
+                <span className="confirm-title">役職確認</span>
+                <AckStatusBar
+                  players={publicState.players}
+                  ackedIds={publicState.game?.roleRevealAckPlayerIds ?? []}
+                  meId={me?.playerId ?? null}
+                />
+              </div>
               <p className="role-card">{roleLabel(privateState?.role ?? null)}</p>
-              <p className="subtle">
-                確認済み: {publicState.game?.roleRevealAckPlayerIds.length ?? 0} / {publicState.players.length}
-              </p>
               <div className="actions">
-                <button className="primary" onClick={() => confirmAndSend("role:ack")}>
-                  確認済みにする
+                <button
+                  className="primary"
+                  disabled={!!me && (publicState.game?.roleRevealAckPlayerIds ?? []).includes(me.playerId)}
+                  onClick={() => confirmAndSend("role:ack")}
+                >
+                  {!!me && (publicState.game?.roleRevealAckPlayerIds ?? []).includes(me.playerId)
+                    ? "確認済み"
+                    : "確認済みにする"}
                 </button>
                 {isHost ? (
-                  <button onClick={() => sendAuthenticated("role:reroll")}>
+                  <button
+                    onClick={() =>
+                      askConfirm("役職を配り直しますか？(全員の確認済みがリセットされます)", () =>
+                        sendAuthenticated("role:reroll"),
+                      )
+                    }
+                  >
                     役職を配り直す
                   </button>
                 ) : null}
@@ -381,7 +450,16 @@ export function App() {
 
           {publicState.status === "wire_reveal" ? (
             <section className="panel stack">
-              <h2>導線確認</h2>
+              <div className="confirm-header">
+                <span className="confirm-title">
+                  導線確認 <span className="confirm-round">R{publicState.game?.currentRound}</span>
+                </span>
+                <AckStatusBar
+                  players={publicState.players}
+                  ackedIds={publicState.game?.wireRevealAckPlayerIds ?? []}
+                  meId={me?.playerId ?? null}
+                />
+              </div>
               <div className="wire-grid">
                 {(privateState?.wires ?? []).map((wire) => (
                   <div key={wire.slotIndex} className="wire-card revealed">
@@ -389,18 +467,60 @@ export function App() {
                   </div>
                 ))}
               </div>
-              <p className="subtle">
-                確認済み: {publicState.game?.wireRevealAckPlayerIds.length ?? 0} / {publicState.players.length}
-              </p>
               <div className="actions">
-                <button className="primary" onClick={() => confirmAndSend("wire:ack")}>
-                  確認済みにする
+                <button
+                  className="primary"
+                  disabled={!!me && (publicState.game?.wireRevealAckPlayerIds ?? []).includes(me.playerId)}
+                  onClick={() => confirmAndSend("wire:ack")}
+                >
+                  {!!me && (publicState.game?.wireRevealAckPlayerIds ?? []).includes(me.playerId)
+                    ? "確認済み"
+                    : "確認済みにする"}
                 </button>
                 {isHost ? (
-                  <button onClick={() => sendAuthenticated("wire:reroll")}>
+                  <button
+                    onClick={() =>
+                      askConfirm("導線を配り直しますか？(全員の確認済みがリセットされます)", () =>
+                        sendAuthenticated("wire:reroll"),
+                      )
+                    }
+                  >
                     導線を配り直す
                   </button>
                 ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {isRoundEnd ? (
+            <section className="panel stack round-end-panel">
+              <div className="confirm-header">
+                <span className="confirm-title">
+                  R{publicState.game?.lastRoundEnded ?? publicState.game?.currentRound} 終了
+                </span>
+                <AckStatusBar
+                  players={publicState.players}
+                  ackedIds={publicState.game?.roundEndAckPlayerIds ?? []}
+                  meId={me?.playerId ?? null}
+                />
+              </div>
+              <p className="round-end-message">
+                次のラウンドに進むと新しい手札が配られます。<br />
+                手元の端末が見えないようにしてから進んでください。
+              </p>
+              <p className="subtle round-end-stats">
+                解除 {publicState.game?.defuseFoundCount ?? 0} / {publicState.game?.requiredDefuseTotal ?? 0}
+              </p>
+              <div className="actions">
+                <button
+                  className="primary"
+                  disabled={!!me && (publicState.game?.roundEndAckPlayerIds ?? []).includes(me.playerId)}
+                  onClick={() => confirmAndSend("round:ack")}
+                >
+                  {!!me && (publicState.game?.roundEndAckPlayerIds ?? []).includes(me.playerId)
+                    ? "準備完了"
+                    : "次のラウンドへ"}
+                </button>
               </div>
             </section>
           ) : null}
@@ -447,10 +567,44 @@ export function App() {
                         ? "解除全達成"
                         : "4ラウンド終了"}
                   </span>
+                  <div className="finish-ready-status">
+                    <span className="finish-ready-label">再戦準備</span>
+                    <AckStatusBar
+                      players={publicState.players}
+                      ackedIds={publicState.game?.readyForNextPlayerIds ?? []}
+                      meId={me?.playerId ?? null}
+                    />
+                  </div>
+                  <div className="finish-actions">
+                    <button
+                      className="primary"
+                      disabled={!!me && (publicState.game?.readyForNextPlayerIds ?? []).includes(me.playerId)}
+                      onClick={() =>
+                        askConfirm(
+                          "同じメンバーでもう一度プレイしますか？(全員の準備完了でロビーに戻ります)",
+                          handleReadyForNext,
+                        )
+                      }
+                    >
+                      {!!me && (publicState.game?.readyForNextPlayerIds ?? []).includes(me.playerId)
+                        ? "準備完了 (他プレイヤー待ち)"
+                        : "もう一度"}
+                    </button>
+                    <button
+                      onClick={() =>
+                        askConfirm("このルームから抜けてホームに戻りますか？", handleLeaveAndGoHome)
+                      }
+                    >
+                      抜ける
+                    </button>
+                  </div>
                 </div>
               ) : null}
 
-              <div className="card-stage">
+              <div
+                className="card-stage"
+                style={{ ["--card-count" as string]: Math.max(myPublicSlots.length, 1) }}
+              >
                 {myPublicSlots.map((slot) => {
                   const label = slot.isRevealed ? wireLabel(slot.revealedCard ?? "silent") : "裏";
 
@@ -525,6 +679,43 @@ export function App() {
   );
 }
 
+function AckStatusBar({
+  players,
+  ackedIds,
+  meId,
+}: {
+  players: PublicPlayer[];
+  ackedIds: string[];
+  meId: string | null;
+}) {
+  const ackedSet = new Set(ackedIds);
+  const ackedCount = players.reduce((count, player) => (ackedSet.has(player.id) ? count + 1 : count), 0);
+  return (
+    <div className="ack-bar" aria-label="確認状況">
+      <span className="ack-count">
+        {ackedCount}/{players.length}
+      </span>
+      <ul className="ack-chip-list">
+        {players.map((player) => {
+          const acked = ackedSet.has(player.id);
+          return (
+            <li
+              key={player.id}
+              className={`ack-chip ${acked ? "acked" : "pending"} ${player.id === meId ? "me" : ""}`}
+              title={`${player.name} — ${acked ? "確認済み" : "未確認"}`}
+            >
+              <span className="ack-mark" aria-hidden>
+                {acked ? "✓" : "…"}
+              </span>
+              <span className="ack-name">{player.name}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function LobbyControls({
   publicState,
   isHost,
@@ -560,7 +751,10 @@ function LobbyControls({
       ) : null}
       <button
         className="primary"
-        disabled={publicState.players.length < 4}
+        disabled={
+          publicState.players.length < 4 ||
+          (publicState.initialCutterMode === "host_select" && !selectedInitialCutter)
+        }
         onClick={() =>
           onStart(publicState.initialCutterMode === "host_select" ? selectedInitialCutter : undefined)
         }

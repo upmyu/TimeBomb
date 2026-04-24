@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx server/dev.ts",
+    "dev": "tsx watch --clear-screen=false server/dev.ts",
     "build": "tsc --noEmit && vite build",
     "start": "tsx server/index.ts",
     "test": "vitest run"
