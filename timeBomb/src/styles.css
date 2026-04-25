@@ -467,12 +467,21 @@ select option {
 }
 
 /* モーダル内のカードグリッドは縦持ち端末でもはみ出さないよう、
-   常に 3 列で 2 段に折り返す。カード自体は aspect-ratio で縦に伸びる */
+   flex+wrap で折り返し、最終行も中央寄せにする。
+   カード幅は常に 3 列分で固定（4 枚でも大きくしない） */
 .modal .wire-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.5rem;
   width: min(360px, 100%);
   margin: 0 auto;
+  grid-template-columns: none;
+}
+
+.modal .wire-grid > .wire-card {
+  flex: 0 0 calc((100% - 2 * 0.5rem) / 3);
+  min-height: 0;
 }
 
 /* エラー通知: フローに載せると背が伸びてボタンが画面外に出るため、
@@ -1255,12 +1264,20 @@ select option {
 }
 
 /* 縦持ちでは横幅が狭くカードが横にはみ出る/小さくなりすぎるので、
-   3 列で 2 段に折り返してカード自体のサイズを確保する */
+   常に 3 列幅でカードを固定し、折り返した段は中央寄せにする。
+   4 枚のときも 3+1 の中央寄せ（カードを大きくしない）。 */
 @media (orientation: portrait) {
   .screen-wire .wire-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    max-width: min(92vw, 420px);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 0.55rem;
+    max-width: min(92vw, 420px);
+    grid-template-columns: none;
+  }
+  .screen-wire .wire-grid > .wire-card {
+    flex: 0 0 calc((100% - 2 * 0.55rem) / 3);
+    min-height: 0;
   }
 }
 

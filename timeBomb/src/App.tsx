@@ -612,12 +612,6 @@ export function App() {
                 </div>
               </div>
 
-              <div className={`play-instruction ${isMeCutter ? "me-turn" : "other-turn"}`}>
-                {isMeCutter
-                  ? "あなたがニッパーを持っています"
-                  : `${currentCutterName}さんがニッパーを持っています`}
-              </div>
-
               <div
                 className="card-stage"
                 style={{ ["--card-count" as string]: Math.max(myPublicSlots.length, 1) }}
@@ -698,7 +692,7 @@ export function App() {
       ) : null}
 
       {confirmDialog ? (
-        <Modal title="確認" onClose={() => setConfirmDialog(null)}>
+        <Modal title="確認" onClose={() => setConfirmDialog(null)} hideClose>
           <p className="confirm-message">{confirmDialog.message}</p>
           <div className="actions confirm-actions">
             <button type="button" onClick={() => setConfirmDialog(null)}>
@@ -1036,13 +1030,23 @@ function LobbyControls({
   );
 }
 
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function Modal({
+  title,
+  children,
+  onClose,
+  hideClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  hideClose?: boolean;
+}) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
         <div className="headline-row compact">
           <h3>{title}</h3>
-          <button onClick={onClose}>閉じる</button>
+          {hideClose ? null : <button onClick={onClose}>閉じる</button>}
         </div>
         {children}
       </div>
