@@ -83,7 +83,7 @@ export function App() {
   const [showRole, setShowRole] = useState(false);
   const [showWires, setShowWires] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [endFlashCard, setEndFlashCard] = useState<"boom" | "defuse" | null>(null);
+  const [endFlashCard, setEndFlashCard] = useState<"boom" | "defuse" | "silent" | null>(null);
   const lastFlashedTimestampRef = useRef<number | null>(null);
   const flashSeededRef = useRef(false);
 
@@ -164,7 +164,12 @@ export function App() {
     if (lastFlashedTimestampRef.current === lastCut.timestamp) return;
     lastFlashedTimestampRef.current = lastCut.timestamp;
 
-    if (lastCut.resultCard !== "boom" && lastCut.resultCard !== "defuse") return;
+    if (
+      lastCut.resultCard !== "boom" &&
+      lastCut.resultCard !== "defuse" &&
+      lastCut.resultCard !== "silent"
+    )
+      return;
 
     setEndFlashCard(lastCut.resultCard);
     const timer = window.setTimeout(() => setEndFlashCard(null), 2400);
@@ -686,6 +691,11 @@ export function App() {
       {endFlashCard === "defuse" ? (
         <div className="defuse-flash" aria-hidden>
           <img src={cardDefuseImg} alt="" className="defuse-flash-card" draggable={false} />
+        </div>
+      ) : null}
+      {endFlashCard === "silent" ? (
+        <div className="silent-flash" aria-hidden>
+          <img src={cardSilentImg} alt="" className="silent-flash-card" draggable={false} />
         </div>
       ) : null}
 
