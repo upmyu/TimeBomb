@@ -83,8 +83,9 @@ export function App() {
   const [showRole, setShowRole] = useState(false);
   const [showWires, setShowWires] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [showBoomFlash, setShowBoomFlash] = useState(false);
-  const boomFlashShownRef = useRef(false);
+  const [endFlashCard, setEndFlashCard] = useState<"boom" | "defuse" | null>(null);
+  const lastFlashedTimestampRef = useRef<number | null>(null);
+  const flashSeededRef = useRef(false);
 
   useEffect(() => {
     const socket = new WebSocket(buildWsUrl());
@@ -146,21 +147,29 @@ export function App() {
   const publicState = clientState.publicState;
   const privateState = clientState.privateState;
 
-  // BOOM で終了した瞬間だけ全画面フラッシュ演出。finished 状態を抜けたらリセット。
+  // 直近の cut_result イベントを観測し、BOOM / 解除 が引かれた瞬間に全画面フラッシュ演出。
+  // - 再接続(過去イベントを抱えた状態)では再生をスキップするため初回 seed をマーク
+  // - timestamp で重複処理防止
   useEffect(() => {
-    const isBoomEnding =
-      publicState?.status === "finished" && publicState?.game?.finishReason === "boom";
-    if (isBoomEnding && !boomFlashShownRef.current) {
-      boomFlashShownRef.current = true;
-      setShowBoomFlash(true);
-      const timer = window.setTimeout(() => setShowBoomFlash(false), 2400);
-      return () => window.clearTimeout(timer);
+    const events = publicState?.game?.publicEvents ?? [];
+    const lastCut = [...events].reverse().find((event) => event.type === "cut_result");
+    if (!lastCut || !lastCut.resultCard) return;
+
+    if (!flashSeededRef.current) {
+      lastFlashedTimestampRef.current = lastCut.timestamp;
+      flashSeededRef.current = true;
+      return;
     }
-    if (publicState?.status !== "finished") {
-      boomFlashShownRef.current = false;
-      if (showBoomFlash) setShowBoomFlash(false);
-    }
-  }, [publicState?.status, publicState?.game?.finishReason, showBoomFlash]);
+
+    if (lastFlashedTimestampRef.current === lastCut.timestamp) return;
+    lastFlashedTimestampRef.current = lastCut.timestamp;
+
+    if (lastCut.resultCard !== "boom" && lastCut.resultCard !== "defuse") return;
+
+    setEndFlashCard(lastCut.resultCard);
+    const timer = window.setTimeout(() => setEndFlashCard(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [publicState?.game?.publicEvents]);
 
   const playersById = useMemo(() => {
     const map = new Map<string, PublicPlayer>();
@@ -675,10 +684,16 @@ export function App() {
         </Modal>
       ) : null}
 
-      {showBoomFlash ? (
+      {endFlashCard === "boom" ? (
         <div className="boom-flash" aria-hidden>
           <img src={cardBoomImg} alt="" className="boom-flash-card" draggable={false} />
           <div className="boom-flash-text">BOOM!</div>
+        </div>
+      ) : null}
+      {endFlashCard === "defuse" ? (
+        <div className="defuse-flash" aria-hidden>
+          <img src={cardDefuseImg} alt="" className="defuse-flash-card" draggable={false} />
+          <div className="defuse-flash-text">解除!</div>
         </div>
       ) : null}
 

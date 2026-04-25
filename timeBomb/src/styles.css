@@ -918,42 +918,93 @@ select option {
   border-color: rgba(180, 240, 180, 0.38);
 }
 
-/* BOOM 爆発フラッシュ (全画面, 数秒) */
-.boom-flash {
+/* BOOM / 解除 を引いた瞬間の全画面フラッシュ演出 (約2.4秒)。
+   ユーザーは端末を縦持ちのまま横向きに置いて使う前提なので、
+   描画も常に 90deg 回転して横向き視点に揃える。
+   - screen-game(ゲーム中)では親 .app-shell-game.screen-game がすでに回転しているため
+     追加の回転は不要 (inset:0 で親を埋める)
+   - screen-finish 等の非回転コンテキストでは、明示的に同じ回転を適用 */
+.boom-flash,
+.defuse-flash {
   position: fixed;
   inset: 0;
   z-index: 60;
   display: grid;
   place-items: center;
   pointer-events: none;
+  animation: boom-flash-fade 2.4s ease-out forwards;
+}
+
+.boom-flash {
   background: radial-gradient(
     circle at center,
     rgba(255, 180, 80, 0.95) 0%,
     rgba(220, 60, 30, 0.95) 40%,
     rgba(60, 10, 5, 0.96) 100%
   );
-  animation: boom-flash-fade 2.4s ease-out forwards;
 }
 
-.boom-flash-card {
-  width: min(60vw, 360px);
+.defuse-flash {
+  background: radial-gradient(
+    circle at center,
+    rgba(160, 250, 180, 0.95) 0%,
+    rgba(46, 168, 92, 0.96) 40%,
+    rgba(10, 60, 30, 0.96) 100%
+  );
+}
+
+/* 非ゲーム画面 (screen-finish 等) では親が回転していないので、
+   フラッシュ自体に同じ 90deg 回転を適用する */
+.app-shell:not(.screen-game) .boom-flash,
+.app-shell:not(.screen-game) .defuse-flash {
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: 100dvh;
+  height: 100vw;
+  transform: translateX(100vw) rotate(90deg);
+  transform-origin: top left;
+}
+
+.boom-flash-card,
+.defuse-flash-card {
+  width: auto;
   height: auto;
+  /* 親は回転後の横長矩形 (実寸 100dvh × 100vw)。
+     カードの長辺を親の高さの 70% までに収め、aspect-ratio で幅が決まる */
+  max-width: min(50%, 360px);
+  max-height: 70%;
   border-radius: 24px;
-  box-shadow: 0 0 80px rgba(255, 180, 80, 0.9);
   animation: boom-flash-card-pop 2.4s cubic-bezier(0.22, 1.35, 0.44, 1) forwards;
 }
 
-.boom-flash-text {
+.boom-flash-card {
+  box-shadow: 0 0 80px rgba(255, 180, 80, 0.9);
+}
+
+.defuse-flash-card {
+  box-shadow: 0 0 80px rgba(140, 240, 160, 0.85);
+}
+
+.boom-flash-text,
+.defuse-flash-text {
   position: absolute;
   top: 58%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: clamp(3rem, 12vw, 7rem);
+  font-size: clamp(2.5rem, 8dvh, 6rem);
   font-weight: 900;
   color: #fff8f2;
   letter-spacing: 0.12em;
-  text-shadow: 0 0 24px rgba(255, 120, 40, 0.95), 0 6px 14px rgba(0, 0, 0, 0.5);
   animation: boom-flash-text-pop 2.4s cubic-bezier(0.22, 1.35, 0.44, 1) forwards;
+}
+
+.boom-flash-text {
+  text-shadow: 0 0 24px rgba(255, 120, 40, 0.95), 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+
+.defuse-flash-text {
+  text-shadow: 0 0 24px rgba(80, 240, 130, 0.95), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes boom-flash-fade {
