@@ -448,13 +448,31 @@ select option {
 
 .modal {
   width: min(560px, 100%);
-  background: #fff8ef;
+  /* ダークテーマ統一: クリーム地のままでは body と同色のテキストが消えてしまうので
+     モーダルもダーク基調に揃える */
+  background: #1f1714;
+  border: 1px solid rgba(232, 218, 195, 0.2);
+  color: var(--color-ink);
   border-radius: 22px;
   padding: 1rem;
   display: grid;
   gap: 0.9rem;
   max-height: 88vh;
   overflow: auto;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+}
+
+.modal h3 {
+  color: var(--color-ink);
+}
+
+/* モーダル内のカードグリッドは縦持ち端末でもはみ出さないよう、
+   常に 3 列で 2 段に折り返す。カード自体は aspect-ratio で縦に伸びる */
+.modal .wire-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: min(360px, 100%);
+  margin: 0 auto;
 }
 
 /* エラー通知: フローに載せると背が伸びてボタンが画面外に出るため、
@@ -1185,6 +1203,16 @@ select option {
   grid-template-columns: repeat(var(--wire-count, 5), minmax(72px, 140px));
 }
 
+/* 縦持ちでは横幅が狭くカードが横にはみ出る/小さくなりすぎるので、
+   3 列で 2 段に折り返してカード自体のサイズを確保する */
+@media (orientation: portrait) {
+  .screen-wire .wire-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: min(92vw, 420px);
+    gap: 0.55rem;
+  }
+}
+
 /* 役職/導線/ラウンド終了 画面の上部コンパクトヘッダー */
 .confirm-header {
   display: flex;
@@ -1661,20 +1689,66 @@ select option {
   }
 }
 
+/* 全画面は端末を縦持ち(portrait)で操作する想定。
+   ただしカード選択画面(screen-game)だけは、端末を横向きに「置いて」使えるよう
+   コンテンツを CSS で 90deg 回転して描画する。
+   端末の OS 上の向きは portrait 固定のまま (回転センサーに依存しない)。
+
+   仕組み:
+   - .app-shell-game.screen-game の内部レイアウトは 100dvh×100vw の横長矩形として組む
+     (内部の CSS は従来の横向き設計のまま動く)
+   - rotate(90deg) + translateX(100vw) で viewport (100vw×100dvh) を埋める
+   - position:fixed の子(cutter-banner / play-instruction 等)は transformed ancestor
+     基準で配置されるため、既存の top/bottom/left/right はそのまま
+     「横向き視点」のベゼル端基準として機能する */
+.app-shell-game.screen-game {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100dvh;
+  height: 100vw;
+  transform: translateX(100vw) rotate(90deg);
+  transform-origin: top left;
+}
+
+/* 内部要素は親(回転コンテナ)の幅高さを 100% で埋める。
+   100vw / 100dvh を直接使うと回転前の viewport を参照して期待と逆になる */
+.app-shell-game.screen-game .game-stage,
+.app-shell-game.screen-game .card-stage {
+  width: 100%;
+  height: 100%;
+}
+
+/* card-stage 内の幅基準: 回転後の "横方向" は local X = 100dvh (端末長辺)
+   高さ基準: 回転後の "縦方向" は local Y = 100vw (端末短辺)
+   よって元の式の vw / dvh を入れ替える */
+.app-shell-game.screen-game .card-stage {
+  --card-max-width: calc(
+    (100dvh - 5.6rem - var(--card-gap) * (var(--card-count) - 1)) / var(--card-count)
+  );
+}
+
+.app-shell-game.screen-game .player-card-face {
+  height: min(calc(100vw - 9rem), calc(var(--card-max-width) * 1.74), 560px);
+}
+
+/* 縦持ちでは横幅が狭いので setup の 2 カラムを 1 カラムに */
 @media (orientation: portrait) {
-  .card-stage {
-    flex-wrap: wrap;
-    align-content: center;
-  }
-
-  .player-card-face {
-    height: min(28vh, 180px);
-    max-width: none;
-  }
-
-  /* 縦持ちでもスクロール禁止: 内部で収めるため screen-setup の split は1段組み */
   .screen-setup .split {
     grid-template-columns: 1fr;
+  }
+
+  /* finish 画面は縦持ち想定なので余白を活かして大きめに表示 */
+  .finish-image {
+    max-width: min(72vw, 320px);
+    max-height: min(38dvh, 320px);
+  }
+  .finish-title {
+    font-size: clamp(1.4rem, 6vw, 2.2rem);
+  }
+  .finish-content {
+    gap: 0.65rem;
+    padding: 1rem;
   }
 }
 
