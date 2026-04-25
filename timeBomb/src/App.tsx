@@ -681,13 +681,11 @@ export function App() {
       {endFlashCard === "boom" ? (
         <div className="boom-flash" aria-hidden>
           <img src={cardBoomImg} alt="" className="boom-flash-card" draggable={false} />
-          <div className="boom-flash-text">BOOM!</div>
         </div>
       ) : null}
       {endFlashCard === "defuse" ? (
         <div className="defuse-flash" aria-hidden>
           <img src={cardDefuseImg} alt="" className="defuse-flash-card" draggable={false} />
-          <div className="defuse-flash-text">解除!</div>
         </div>
       ) : null}
 
