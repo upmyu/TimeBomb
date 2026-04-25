@@ -15,6 +15,13 @@ import cardSilentImg from "./assets/cards/02_silent.png";
 import cardBoomImg from "./assets/cards/03_boom.png";
 import cardBackImg from "./assets/cards/04_bomb.png";
 import nipperImg from "./assets/img/nipper.png";
+import titleLogoImg from "./assets/img/title.png";
+import bomberImg from "./assets/img/bomber.png";
+import policeImg from "./assets/img/police.png";
+import bomberWinImg from "./assets/img/bomber_win.png";
+import bomberLoseImg from "./assets/img/bomber_lose.png";
+import policeWinImg from "./assets/img/police_win.png";
+import policeLoseImg from "./assets/img/police_lose.png";
 
 function cardImageSrc(card: WireCard): string {
   if (card === "defuse") return cardDefuseImg;
@@ -338,7 +345,9 @@ export function App() {
           ? "screen-wire"
           : publicState.status === "round_end"
             ? "screen-round-end"
-            : "screen-game";
+            : publicState.status === "finished"
+              ? "screen-finish"
+              : "screen-game";
   const currentCutterName = publicState?.game?.currentCutterPlayerId
     ? playersById.get(publicState.game.currentCutterPlayerId)?.name ?? "不明"
     : "-";
@@ -354,7 +363,7 @@ export function App() {
     <div className={`app-shell ${isGameScreen ? "app-shell-game" : ""} ${screenClassName}`}>
       {!isGameScreen ? (
         <header className="hero">
-          <h1>タイムボム</h1>
+          <img src={titleLogoImg} alt="タイムボム" className="hero-logo" draggable={false} />
         </header>
       ) : null}
 
@@ -456,7 +465,7 @@ export function App() {
                   meId={me?.playerId ?? null}
                 />
               </div>
-              <p className="role-card">{roleLabel(privateState?.role ?? null)}</p>
+              <RoleReveal role={privateState?.role ?? null} />
               <div className="actions">
                 <button
                   className="primary"
@@ -494,7 +503,12 @@ export function App() {
                   meId={me?.playerId ?? null}
                 />
               </div>
-              <div className="wire-grid">
+              <div
+                className="wire-grid"
+                style={{
+                  ["--wire-count" as string]: Math.max(privateState?.wires?.length ?? 0, 1),
+                }}
+              >
                 {(privateState?.wires ?? []).map((wire) => (
                   <div key={wire.slotIndex} className="wire-card revealed">
                     <img src={cardImageSrc(wire.card)} alt={wireLabel(wire.card)} />
@@ -559,8 +573,8 @@ export function App() {
             </section>
           ) : null}
 
-          {isGameScreen ? (
-            <section className={`game-stage ${isFinished ? "game-stage-finished" : ""}`}>
+          {isPlaying ? (
+            <section className="game-stage">
               <div className="game-overlay game-overlay-top">
                 <span className="round-pill">R{publicState.game?.currentRound}</span>
                 <DefuseProgress
@@ -578,77 +592,22 @@ export function App() {
                 </button>
               </div>
 
-              {isPlaying ? (
-                <div className={`cutter-banner ${isMeCutter ? "is-me" : "is-other"}`}>
-                  <img src={nipperImg} alt="ニッパー" className="cutter-nipper-img" draggable={false} />
-                  <div className="cutter-info">
-                    <span className="cutter-label">ニッパー</span>
-                    <strong className="cutter-name">
-                      {currentCutterName}
-                      {isMeCutter ? " (あなた)" : ""}
-                    </strong>
-                  </div>
-                </div>
-              ) : null}
-
-              {isPlaying ? (
-                <div className={`play-instruction ${isMeCutter ? "me-turn" : "other-turn"}`}>
-                  {isMeCutter
-                    ? "別の人の端末を受け取り、切りたいカードを選んでください"
-                    : `${currentCutterName}さんにこの端末を渡してください`}
-                </div>
-              ) : null}
-
-              {isFinished ? (
-                <div className="game-finish-panel">
-                  <strong>
-                    {privateState?.role && publicState.game?.winnerTeam
-                      ? privateState.role === publicState.game.winnerTeam
-                        ? "勝利"
-                        : "敗北"
-                      : "-"}
+              <div className={`cutter-banner ${isMeCutter ? "is-me" : "is-other"}`}>
+                <img src={nipperImg} alt="ニッパー" className="cutter-nipper-img" draggable={false} />
+                <div className="cutter-info">
+                  <span className="cutter-label">ニッパー</span>
+                  <strong className="cutter-name">
+                    {currentCutterName}
+                    {isMeCutter ? " (あなた)" : ""}
                   </strong>
-                  <span>
-                    {publicState.game?.winnerTeam === "bomber" ? "ボマー団の勝利" : "タイムポリスの勝利"} /{" "}
-                    {publicState.game?.finishReason === "boom"
-                      ? "BOOM公開"
-                      : publicState.game?.finishReason === "all_defused"
-                        ? "解除全達成"
-                        : "4ラウンド終了"}
-                  </span>
-                  <div className="finish-ready-status">
-                    <span className="finish-ready-label">再戦準備</span>
-                    <AckStatusBar
-                      players={publicState.players}
-                      ackedIds={publicState.game?.readyForNextPlayerIds ?? []}
-                      meId={me?.playerId ?? null}
-                    />
-                  </div>
-                  <div className="finish-actions">
-                    <button
-                      className="primary"
-                      disabled={!!me && (publicState.game?.readyForNextPlayerIds ?? []).includes(me.playerId)}
-                      onClick={() =>
-                        askConfirm(
-                          "同じメンバーでもう一度プレイしますか？(全員の準備完了でロビーに戻ります)",
-                          handleReadyForNext,
-                        )
-                      }
-                    >
-                      {!!me && (publicState.game?.readyForNextPlayerIds ?? []).includes(me.playerId)
-                        ? "準備完了 (他プレイヤー待ち)"
-                        : "もう一度"}
-                    </button>
-                    <button
-                      onClick={() =>
-                        askConfirm("このルームから抜けてホームに戻りますか？", handleLeaveAndGoHome)
-                      }
-                    >
-                      抜ける
-                    </button>
-                  </div>
                 </div>
-              ) : null}
+              </div>
+
+              <div className={`play-instruction ${isMeCutter ? "me-turn" : "other-turn"}`}>
+                {isMeCutter
+                  ? "あなたがニッパーを持っています"
+                  : `${currentCutterName}さんがニッパーを持っています`}
+              </div>
 
               <div
                 className="card-stage"
@@ -675,25 +634,31 @@ export function App() {
                   );
                 })}
               </div>
-
-              {publicState.game?.roleAssignmentsAtEnd ? (
-                <div className="game-finish-roles">
-                  {publicState.players.map((player) => (
-                    <div key={player.id} className="summary-row">
-                      <span>{player.name}</span>
-                      <strong>{roleLabel(publicState.game?.roleAssignmentsAtEnd?.[player.id] ?? null)}</strong>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
             </section>
+          ) : null}
+
+          {isFinished ? (
+            <FinishStage
+              publicState={publicState}
+              privateState={privateState}
+              meId={me?.playerId ?? null}
+              onReadyForNext={() =>
+                askConfirm(
+                  "同じメンバーでもう一度プレイしますか？(全員の準備完了でロビーに戻ります)",
+                  handleReadyForNext,
+                )
+              }
+              onLeave={() =>
+                askConfirm("このルームから抜けてホームに戻りますか？", handleLeaveAndGoHome)
+              }
+            />
           ) : null}
         </>
       )}
 
       {showRole ? (
         <Modal title="役職再確認" onClose={() => setShowRole(false)}>
-          <p className="role-card">{roleLabel(privateState?.role ?? null)}</p>
+          <RoleReveal role={privateState?.role ?? null} />
         </Modal>
       ) : null}
 
@@ -871,6 +836,123 @@ function AckStatusBar({
         })}
       </ul>
     </div>
+  );
+}
+
+function RoleReveal({ role }: { role: PrivateGameState["role"] }) {
+  if (role === "bomber") {
+    return (
+      <div className="role-reveal is-bomber">
+        <img src={bomberImg} alt="ボマー団" className="role-reveal-image" draggable={false} />
+        <span className="role-reveal-label">ボマー団</span>
+      </div>
+    );
+  }
+  if (role === "time_police") {
+    return (
+      <div className="role-reveal is-police">
+        <img src={policeImg} alt="タイムポリス" className="role-reveal-image" draggable={false} />
+        <span className="role-reveal-label">タイムポリス</span>
+      </div>
+    );
+  }
+  return <p className="role-card">-</p>;
+}
+
+function FinishStage({
+  publicState,
+  privateState,
+  meId,
+  onReadyForNext,
+  onLeave,
+}: {
+  publicState: PublicRoomState;
+  privateState: PrivateGameState | null;
+  meId: string | null;
+  onReadyForNext: () => void;
+  onLeave: () => void;
+}) {
+  const myRole = privateState?.role ?? null;
+  const winnerTeam = publicState.game?.winnerTeam ?? null;
+  const isWin = !!myRole && !!winnerTeam && myRole === winnerTeam;
+
+  const finishImg =
+    myRole === "bomber"
+      ? isWin
+        ? bomberWinImg
+        : bomberLoseImg
+      : myRole === "time_police"
+        ? isWin
+          ? policeWinImg
+          : policeLoseImg
+        : null;
+
+  const winnerLabel =
+    winnerTeam === "bomber" ? "ボマー団の勝利" : winnerTeam === "time_police" ? "タイムポリスの勝利" : "-";
+  const reasonLabel =
+    publicState.game?.finishReason === "boom"
+      ? "BOOM公開"
+      : publicState.game?.finishReason === "all_defused"
+        ? "解除全達成"
+        : "4ラウンド終了";
+
+  const readyForNextPlayerIds = publicState.game?.readyForNextPlayerIds ?? [];
+  const isReady = !!meId && readyForNextPlayerIds.includes(meId);
+
+  return (
+    <section className={`finish-stage ${isWin ? "is-win" : "is-lose"}`}>
+      <div className="finish-bg" aria-hidden />
+      <div className="finish-burst" aria-hidden />
+      <div className="finish-content">
+        <div className={`finish-title ${isWin ? "win" : "lose"}`}>
+          {isWin ? "勝 利" : "敗 北"}
+        </div>
+        {finishImg ? (
+          <img
+            src={finishImg}
+            alt={isWin ? "勝利" : "敗北"}
+            className="finish-image"
+            draggable={false}
+          />
+        ) : null}
+        <div className="finish-summary">
+          <div className="finish-winner-team">{winnerLabel}</div>
+          <div className="finish-reason">{reasonLabel}</div>
+        </div>
+        {publicState.game?.roleAssignmentsAtEnd ? (
+          <ul className="finish-role-assignments">
+            {publicState.players.map((player) => {
+              const playerRole = publicState.game?.roleAssignmentsAtEnd?.[player.id] ?? null;
+              return (
+                <li
+                  key={player.id}
+                  className={`finish-role-row ${playerRole === winnerTeam ? "is-winner" : "is-loser"}`}
+                >
+                  <span className="finish-role-name">{player.name}</span>
+                  <span className="finish-role-tag">{roleLabel(playerRole)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+        <div className="finish-ready-status">
+          <span className="finish-ready-label">再戦準備</span>
+          <AckStatusBar
+            players={publicState.players}
+            ackedIds={readyForNextPlayerIds}
+            meId={meId}
+          />
+        </div>
+        <div className="finish-actions">
+          <button className="primary" disabled={isReady} onClick={onReadyForNext}>
+            {isReady ? "準備完了 (他プレイヤー待ち)" : "もう一度"}
+          </button>
+          <button className="ghost" onClick={onLeave}>
+            抜ける
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 

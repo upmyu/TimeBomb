@@ -6,7 +6,9 @@
       "Bash(npx vitest *)",
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(timeBomb/node_modules/.bin/tsc --noEmit -p timeBomb/tsconfig.json)",
-      "Bash(node_modules/.bin/tsc --noEmit -p tsconfig.json)"
+      "Bash(node_modules/.bin/tsc --noEmit -p tsconfig.json)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npx vite *)"
     ]
   }
 }
