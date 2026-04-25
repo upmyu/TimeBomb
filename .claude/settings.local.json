@@ -8,7 +8,12 @@
       "Bash(timeBomb/node_modules/.bin/tsc --noEmit -p timeBomb/tsconfig.json)",
       "Bash(node_modules/.bin/tsc --noEmit -p tsconfig.json)",
       "Bash(echo \"exit=$?\")",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(npx --prefix timeBomb vite build)",
+      "Bash(npx --prefix timeBomb tsc --noEmit -p timeBomb/tsconfig.json)",
+      "Bash(npx --prefix timeBomb vite build --config timeBomb/vite.config.ts)",
+      "Bash(pushd timeBomb)",
+      "Bash(popd)"
     ]
   }
 }
